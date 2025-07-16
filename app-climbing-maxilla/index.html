@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DUBHE AR WebXR</title>
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="DUBHE AR">
+  <meta name="theme-color" content="#05dbf2">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-extras@7.4.0/dist/aframe-extras.min.js"></script>
+  <script src="https://unpkg.com/aframe-gesture-detector/dist/aframe-gesture-detector.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    .overlay-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .overlay-screen.hidden { opacity: 0; pointer-events: none; }
+    .overlay-screen.completely-hidden { display: none; }
+    .floating-menu {
+      position: fixed;
+      top: 80px;
+      right: 15px;
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .floating-menu button {
+      background: #05dbf2;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 15px;
+      color: #000;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    a-scene {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    a-scene.visible {
+      display: block;
+    }
+    #ar-link {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- AR Quick Look para iOS -->
+  <a id="ar-link" rel="ar" href="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.usdz#apple-ar-quick-look.orientation=vertical&allowsContentScaling=0">
+    <img src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.gif" alt="" />
+  </a>
+
+  <!-- Splash inicial -->
+  <div class="overlay-screen" id="splash">
+    <img src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.gif" style="max-width: 80%; max-height: 40vh;">
+    <p>Preparando recursos...</p>
+    <button id="start-ar-button">Iniciar Experiência AR</button>
+  </div>
+
+  <!-- Tela de posicionamento -->
+  <div class="overlay-screen hidden completely-hidden" id="placement-screen">
+    <h2>Encontre uma Superfície</h2>
+    <p>Movimente seu dispositivo para identificar uma superfície plana.</p>
+    <button id="enter-ar-button">Entrar em AR</button>
+  </div>
+
+  <!-- Tela de erro -->
+  <div class="overlay-screen hidden completely-hidden" id="error-screen">
+    <h2>Erro</h2>
+    <p id="error-message"></p>
+    <button onclick="location.reload()">Tentar Novamente</button>
+  </div>
+
+  <!-- Menu flutuante -->
+  <div class="floating-menu" id="floating-menu">
+    <button onclick="window.open('https://www.dubhe.com.br', '_blank')">Site Oficial</button>
+    <button onclick="location.reload()">Resetar Ancoragem</button>
+    <button id="record-btn">Gravar Tela</button>
+  </div>
+
+  <!-- Cena WebXR -->
+  <a-scene
+    id="ar-scene"
+    webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay; overlayElement: body"
+    ar-hit-test="target: #reticle; type: plane,point"
+    renderer="colorManagement: true"
+    vr-mode-ui="enabled: false"
+    loading-screen="enabled: false"
+    gesture-detector>
+
+    <a-assets>
+      <a-asset-item id="model" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.glb?v=1750183886740"></a-asset-item>
+      <img id="reticle-img" src="https://cdn.glitch.global/6db2fc83-e26d-493e-a62e-cdd220b3bb19/reticle-DUBHE-star.png?v=1750983812497" />
+    </a-assets>
+
+    <!-- Luzes -->
+    <a-light type="ambient" intensity="0.5"></a-light>
+    <a-light type="directional" intensity="0.6" position="-1 2 2"></a-light>
+
+    <!-- Reticle com imagem e animação -->
+    <a-entity id="reticle" visible="false" rotation="-90 0 0">
+      <a-plane
+        src="#reticle-img"
+        width="0.2"
+        height="0.2"
+        transparent="true"
+        opacity="0.85"
+        material="shader: flat; side: double"
+        animation__scale="property: scale; dir: alternate; dur: 1000; to: 1.3 1.3 1.3; loop: true"
+        animation__rotation="property: rotation; to: 0 0 360; dur: 4000; loop: true; easing: linear">
+      </a-plane>
+    </a-entity>
+
+    <!-- Modelo principal -->
+    <a-entity id="ar-model" gltf-model="#model" scale="5 5 5" visible="false" animation-mixer gesture-handler></a-entity>
+
+    <!-- Câmera -->
+    <a-camera position="0 0 0"></a-camera>
+  </a-scene>
+
+  <script>
+    AFRAME.registerComponent('gesture-handler', {
+      schema: {},
+      init: function () {
+        const el = this.el;
+        let startX = 0, startY = 0, startDist = 0;
+
+        function getDistance(touches) {
+          const dx = touches[0].clientX - touches[1].clientX;
+          const dy = touches[0].clientY - touches[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        el.sceneEl.addEventListener('touchstart', function (e) {
+          if (e.touches.length === 1) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+          } else if (e.touches.length === 2) {
+            startDist = getDistance(e.touches);
+          }
+        });
+
+        el.sceneEl.addEventListener('touchmove', function (e) {
+          if (e.touches.length === 1) {
+            const deltaX = e.touches[0].clientX - startX;
+            const rotation = el.getAttribute('rotation');
+            el.setAttribute('rotation', {
+              x: rotation.x,
+              y: rotation.y + deltaX * 0.5,
+              z: rotation.z
+            });
+            startX = e.touches[0].clientX;
+          } else if (e.touches.length === 2) {
+            const currentDist = getDistance(e.touches);
+            const scale = el.getAttribute('scale');
+            const scaleFactor = currentDist / startDist;
+            el.setAttribute('scale', {
+              x: scale.x * scaleFactor,
+              y: scale.y * scaleFactor,
+              z: scale.z * scaleFactor
+            });
+            startDist = currentDist;
+          }
+        });
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const splash = document.getElementById('splash');
+      const placement = document.getElementById('placement-screen');
+      const errorScreen = document.getElementById('error-screen');
+      const errorMessage = document.getElementById('error-message');
+      const startBtn = document.getElementById('start-ar-button');
+      const enterBtn = document.getElementById('enter-ar-button');
+      const sceneEl = document.getElementById('ar-scene');
+      const reticle = document.getElementById('reticle');
+      const arModel = document.getElementById('ar-model');
+      const floatingMenu = document.getElementById('floating-menu');
+      const recordBtn = document.getElementById('record-btn');
+      const arLink = document.getElementById('ar-link');
+      let mediaRecorder = null;
+      let recordedChunks = [];
+      let placed = false;
+
+      const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      const show = screen => {
+        [splash, placement, errorScreen].forEach(el => el.classList.add('hidden', 'completely-hidden'));
+        if (screen) screen.classList.remove('hidden', 'completely-hidden');
+      };
+
+      startBtn.onclick = async () => {
+        startBtn.disabled = true;
+        if (isIOS()) {
+          arLink.click();
+          setTimeout(() => { startBtn.disabled = false; }, 3000);
+          return;
+        }
+        show(placement);
+      };
+
+      enterBtn.onclick = async () => {
+        enterBtn.disabled = true;
+        try {
+          if (!(navigator.xr && await navigator.xr.isSessionSupported('immersive-ar'))) {
+            throw new Error('Seu navegador não suporta WebXR. Tente no Chrome para Android.');
+          }
+          sceneEl.classList.add('visible');
+          if (sceneEl.enterAR) await sceneEl.enterAR();
+          show(null);
+        } catch (e) {
+          errorMessage.textContent = e.message;
+          show(errorScreen);
+        }
+      };
+
+      sceneEl.addEventListener('click', () => {
+        if (!placed && reticle.getAttribute('visible')) {
+          placed = true;
+          arModel.setAttribute('visible', true);
+          arModel.setAttribute('position', reticle.object3D.position);
+          sceneEl.removeAttribute('ar-hit-test');
+          reticle.setAttribute('visible', false);
+          floatingMenu.style.display = 'flex';
+        }
+      });
+
+      recordBtn.onclick = () => {
+        const canvas = sceneEl.canvas;
+        if (!canvas.captureStream) {
+          alert('Seu navegador não suporta gravação de tela.');
+          return;
+        }
+
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          recordBtn.textContent = 'Gravar Tela';
+          return;
+        }
+
+        const stream = canvas.captureStream(30);
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'dubhe-ar-recording.webm';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        mediaRecorder.start();
+        recordBtn.textContent = 'Parar Gravação';
+      };
+    });
+  </script>
+</body>
+</html>
