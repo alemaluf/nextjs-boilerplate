@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Dubhe - Completo</title>
+
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.loaders.min.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; width: 100vw; height: 100vh; }
+        a-scene, canvas, video { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; }
+        canvas, video { object-fit: cover; z-index: -1; }
+    </style>
+</head>
+<body>
+<a-scene embedded arjs="sourceType: webcam; debugUIEnabled: true;">
+    <a-assets>
+        <a-asset-item id="dubheGltf" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.glb?v=1750183886740"></a-asset-item>
+        <a-asset-item id="outroGltf" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/another.glb"></a-asset-item>
+        <img id="planeTexture" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/aaa1arte-digital-dos-planetas-da-galaxia.jpeg?v=1750276067018">
+    </a-assets>
+
+    <a-camera position="0 1 2" look-controls></a-camera>
+
+    <!-- Marcador Hiro -->
+    <a-marker preset="hiro">
+        <a-gltf-model src="#dubheGltf" position="0 0.25 0" scale="0.5 0.5 0.5" rotation="-90 0 0"></a-gltf-model>
+        <a-plane src="#planeTexture" width="15" height="10" position="0 -3 0" rotation="-90 0 0"></a-plane>
+
+        <!-- Botão 3D -->
+        <a-box position="0 0.5 0" depth="0.1" height="0.3" width="1" color="#05dbf2"
+            event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2"
+            event-set__leave="_event: mouseleave; scale: 1 1 1"
+            onclick="alert('Botão Hiro clicado')">
+            <a-text value="Botão 1" align="center" position="0 0 0.06" color="#000"></a-text>
+        </a-box>
+    </a-marker>
+
+    <!-- Marcador Kanji -->
+    <a-marker preset="kanji">
+        <a-gltf-model src="#outroGltf" position="0 0.25 0" scale="0.5 0.5 0.5" rotation="-90 0 0"></a-gltf-model>
+        <a-plane src="#planeTexture" width="15" height="10" position="0 -3 0" rotation="-90 0 0"></a-plane>
+
+        <!-- Botão 3D -->
+        <a-sphere position="0 0.5 0" radius="0.3" color="#f205c2"
+            event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2"
+            event-set__leave="_event: mouseleave; scale: 1 1 1"
+            onclick="alert('Botão Kanji clicado')">
+            <a-text value="Botão 2" align="center" position="0 0.4 0" color="#fff"></a-text>
+        </a-sphere>
+    </a-marker>
+
+    <!-- HUD Flutuante -->
+    <a-entity position="0 1.6 -2">
+        <a-plane color="#222" width="2" height="1" opacity="0.8"></a-plane>
+        <a-text value="Menu AR" align="center" position="0 0.3 0.01" color="#fff"></a-text>
+        <a-box position="-0.6 -0.2 0.01" width="0.4" height="0.2" depth="0.05" color="#05dbf2"
+            onclick="alert('Ação Menu 1')">
+            <a-text value="Menu 1" align="center" position="0 0 0.06" color="#000"></a-text>
+        </a-box>
+        <a-box position="0.6 -0.2 0.01" width="0.4" height="0.2" depth="0.05" color="#05dbf2"
+            onclick="alert('Ação Menu 2')">
+            <a-text value="Menu 2" align="center" position="0 0 0.06" color="#000"></a-text>
+        </a-box>
+    </a-entity>
+
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; intensity: 1.2" position="1 1 1"></a-entity>
+</a-scene>
+</body>
+</html>

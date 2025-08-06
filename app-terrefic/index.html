@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AR Dubhe Interativo</title>
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script id="arjs-script" src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+
+  <style>
+    /* Estilos Gerais */
+    body { margin: 0; overflow: hidden; background-color: #000; }
+
+    /* Estilos do Menu Flutuante */
+    .menu {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 16px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    .menu.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .menu button {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      transition: background 0.3s, transform 0.2s;
+    }
+    .menu button:hover {
+      background: #05dbf2;
+      transform: scale(1.05);
+    }
+    /* Estilo para ocultar botões específicos no iOS */
+    .menu.ios .hide-on-ios {
+        display: none !important;
+    }
+
+    /* Estilos da Splash Screen */
+    .splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    .splash img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Estilos para a Tela de Inicialização do AR */
+    .ar-init-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .ar-init-screen button {
+      background: #05dbf2;
+      border: none;
+      border-radius: 12px;
+      padding: 15px 30px;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      transition: background 0.3s, transform 0.2s;
+      margin-top: 20px;
+      color: #000;
+      font-weight: bold;
+    }
+    .ar-init-screen button:hover {
+      transform: scale(1.05);
+    }
+    .ar-init-screen h2 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .ar-init-screen p {
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    /* A cena A-Frame estará oculta por padrão */
+    a-scene {
+        display: none; /* Inicia oculto, será exibido via JS */
+        position: absolute; /* Para não ocupar espaço até ser ativado */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    a-scene.active {
+        display: block; /* Ativa a exibição */
+    }
+  </style>
+</head>
+<body>
+  <div class="splash" id="splash">
+    <img src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.gif?v=1750278096191" alt="Dubhe Loading" />
+  </div>
+
+  <div class="ar-init-screen" id="ar-init-screen" style="display: none;">
+    <h2>Bem-vindo à Experiência AR Dubhe!</h2>
+    <p>Toque no botão abaixo para ativar a câmera e começar a Realidade Aumentada.</p>
+    <button id="start-ar-button">Iniciar Realidade Aumentada</button>
+  </div>
+
+  <div class="menu" id="ar-menu">
+    <button onclick="window.open('https://www.dubhe.com.br', '_blank')">DUBHE</button>
+    <button id="record" class="hide-on-ios">▶ Gravar</button>
+    <button id="stop" style="display:none" class="hide-on-ios">⏹ Parar</button>
+    <button id="switch-resolution" class="hide-on-ios">⚡ Resolução</button>
+    <button id="switch-camera" class="hide-on-ios">🔄 Câmera</button>
+    <button id="orientation" class="hide-on-ios">💻 Orientação</button>
+    <button id="reset">💡 Reiniciar</button>
+  </div>
+
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-assets timeout="10000">
+      <a-asset-item id="model" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/dubhe.glb?v=1750688000000" response-type="arraybuffer" crossorigin="anonymous"></a-asset-item>
+      <img id="texture" src="https://cdn.glitch.global/b3020e53-aced-463c-9215-f5581e7829c2/aaa1arte-digital-dos-planetas-da-galaxia.jpeg" crossorigin="anonymous" />
+    </a-assets>
+
+    <a-marker type="pattern" url="https://cdn.glitch.global/e6fc2535-56c3-4181-a3b9-7b14aa4aabdf/patt-terrific-dubhe.patt?v=1750691025729">
+      
+      <a-entity 
+        id="interactive-model" 
+        gltf-model="#model" 
+        animation-mixer 
+        position="0 0.5 0" 
+        scale="20 20 20" 
+        rotation="-90 0 0"
+        class="clickable"
+        click-handler="url: https://www.dubhe.com.br">
+      </a-entity>
+      
+      <a-plane 
+        src="#texture" 
+        width="10" 
+        height="8" 
+        position="0 -2 0" 
+        rotation="-90 0 0"
+        class="clickable"
+        click-handler="url: https://www.dubhe.com.br">
+      </a-plane>
+
+    </a-marker>
+
+    <a-entity camera>
+        <a-cursor raycaster="objects: .clickable"></a-cursor>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // NOVO: Componente A-Frame para lidar com cliques e abrir links.
+    // Isso torna o código reutilizável para qualquer objeto.
+    AFRAME.registerComponent('click-handler', {
+        schema: {
+            url: { type: 'string', default: '' }
+        },
+        init: function () {
+            this.el.addEventListener('click', () => {
+                if (this.data.url) {
+                    console.log(`Objeto clicado! Abrindo URL: ${this.data.url}`);
+                    window.open(this.data.url, '_blank');
+                }
+            });
+        }
+    });
+
+    // Referências aos elementos do DOM
+    const cameraButton = document.getElementById('switch-camera');
+    const resolutionButton = document.getElementById('switch-resolution');
+    const recordButton = document.getElementById('record');
+    const stopButton = document.getElementById('stop');
+    const resetButton = document.getElementById('reset');
+    const splash = document.getElementById('splash');
+    const arInitScreen = document.getElementById('ar-init-screen');
+    const startArButton = document.getElementById('start-ar-button');
+    const arMenu = document.getElementById('ar-menu');
+    const arScene = document.querySelector('a-scene');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let currentFacingMode = 'environment';
+    const resolutions = ['640x480', '1280x720', '1920x1080'];
+    let currentResolutionIndex = (window.innerWidth < 768) ? 0 : 1;
+
+    function isIOS() {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    }
+
+    function initializeAR() {
+      arScene.style.display = 'block';
+      arScene.classList.add('active');
+      arMenu.classList.add('active');
+      arScene.addEventListener('camera-init', () => {
+        console.log('AR.js camera initialized!');
+      });
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    // REMOVIDO: O event listener antigo foi removido daqui e substituído pelo componente.
+
+    // Funções de controle do menu (Gravação, Câmera, Resolução, etc.)
+    if (cameraButton && !isIOS()) {
+      cameraButton.onclick = () => {
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        arScene.setAttribute('arjs', `sourceType: webcam; debugUIEnabled: false; facingMode: ${currentFacingMode}; resolution: ${resolutions[currentResolutionIndex]};`);
+      };
+    }
+
+    if (resolutionButton && !isIOS()) {
+      resolutionButton.onclick = () => {
+        currentResolutionIndex = (currentResolutionIndex + 1) % resolutions.length;
+        arScene.setAttribute('arjs', `sourceType: webcam; debugUIEnabled: false; facingMode: ${currentFacingMode}; resolution: ${resolutions[currentResolutionIndex]};`);
+      };
+    }
+
+    let animationFrameId;
+
+    if (recordButton) {
+      recordButton.onclick = () => {
+        if (isIOS()) {
+          alert('Para gravar a tela no iOS, por favor, utilize a função de gravação de tela nativa do seu dispositivo (disponível na Central de Controle).');
+          return;
+        }
+
+        const video = document.querySelector('video');
+        const rendererCanvas = arScene.renderer.domElement;
+        const combinedCanvas = document.createElement('canvas');
+        
+        const width = rendererCanvas.width;
+        const height = rendererCanvas.height;
+        combinedCanvas.width = width;
+        combinedCanvas.height = height;
+        const ctx = combinedCanvas.getContext('2d');
+
+        const fps = 30;
+        const stream = combinedCanvas.captureStream(fps);
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp8' });
+        recordedChunks = [];
+
+        const drawFrame = () => {
+          if (video && rendererCanvas) {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(video, 0, 0, width, height);
+            ctx.drawImage(rendererCanvas, 0, 0, width, height);
+          }
+          animationFrameId = requestAnimationFrame(drawFrame);
+        };
+        drawFrame();
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          cancelAnimationFrame(animationFrameId);
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'gravacao_ar.webm';
+          document.body.appendChild(a);
+a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        mediaRecorder.start();
+        recordButton.style.display = 'none';
+        stopButton.style.display = 'inline';
+      };
+    }
+
+    if (stopButton && !isIOS()) {
+      stopButton.onclick = () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          setTimeout(() => {
+            stopButton.style.display = 'none';
+            recordButton.style.display = 'inline';
+          }, 100); 
+        }
+      };
+    }
+
+    if (resetButton) {
+      resetButton.onclick = () => {
+        location.reload();
+      };
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(() => {
+            splash.remove();
+            if (arInitScreen) {
+              arInitScreen.style.display = 'flex';
+            }
+          }, 500); 
+        }
+      }, 2000); 
+    });
+
+    if (startArButton) {
+      startArButton.addEventListener('click', () => {
+        arInitScreen.style.opacity = '0';
+        setTimeout(() => {
+          arInitScreen.remove();
+          initializeAR();
+        }, 500);
+      });
+    }
+
+    window.addEventListener('orientationchange', function() {
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 200);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (isIOS()) {
+            arMenu.classList.add('ios');
+        } else {
+            // Em não-iOS, podemos pular a tela de "iniciar" se quisermos,
+            // mas manter a consistência pode ser melhor para a experiência do usuário.
+        }
+    });
+
+  </script>
+</body>
+</html>
